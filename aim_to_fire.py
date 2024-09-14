@@ -8,9 +8,10 @@ import capture
 import threading
 import time
 import wait_for_fire
+import cam_image_manager
 # 5 - справа дальше / 4 - слева / 3 - справа ближе
-portNo = "COM4"
-uart = serial.Serial(portNo, 9600)      # инициализируем последовательный порт на скорости 9600 Бод
+# portNo = "COM4"
+# uart = serial.Serial(portNo, 9600)      # инициализируем последовательный порт на скорости 9600 Бод
 
 angleX = 90
 angleY = 50
@@ -26,6 +27,9 @@ yRotate = -1
 
 is_shooting = False
 
+# url = 'http://192.168.4.1/cam-hi.jpg'
+
+remote_control = False
 
 def aim(x_start, y_start, x_end, y_end, center_x, center_y):
     global angleX, angleY, is_shooting  # Объявляем angleX и angleY как глобальные
@@ -71,7 +75,7 @@ def aim(x_start, y_start, x_end, y_end, center_x, center_y):
             shoot_str = '#1;'
         msg = f"!{angleX}@{angleY}" + shoot_str
         msg = bytes(str(msg), 'utf-8')
-        uart.write(msg)
+        # uart.write(msg)
         print("AIMING", msg)
 
 
@@ -115,7 +119,7 @@ def shoot(closer_left: bool, closer_top: bool, spray_width: int):
             msg = bytes(str(msg), 'utf-8')
             angleX = x
             angleY = y
-            uart.write(msg)
+            # uart.write(msg)
             print(msg)
             time.sleep(0.02)
         buf = x_start
@@ -150,11 +154,11 @@ def search():
     if angleX >= 150:
         angleX = 150
         xDirection = abs(xDirection) * -1 * xRotate
-        #angleY += yDirection * yRotate
+        angleY += yDirection * yRotate
     if angleX <= 0:
         angleX = 0
         xDirection = abs(xDirection) * xRotate
-        #angleY += yDirection * yRotate
+        angleY += yDirection * yRotate
     if angleY >= 70:
         angleY = 70
         yDirection = abs(yDirection) * -1 * yRotate
@@ -166,27 +170,28 @@ def search():
     angleX += xDirection * xRotate
     msg = f"!{angleX}@{angleY}#0;"
     msg = bytes(str(msg), 'utf-8')
-    uart.write(msg)
+    # uart.write(msg)
     print("SEARCHING", msg)
 
 
 def send_fire_xy(model, cam_num, show_video=True):
+    # global url
     # Open the input video file
-    cap = cv2.VideoCapture(cam_num)
-    if not cap.isOpened():
-        raise Exception("Error: Could not open cam.")
-    cap.read()
-    cap.read()
-    cap.read()
-    cap.read()
-    cap.read()
+    # cap = cv2.VideoCapture(cam_num)
+    # if not cap.isOpened():
+    #     raise Exception("Error: Could not open cam.")
+    # cap.read()
+    # cap.read()
+    # cap.read()
+    # cap.read()
+    # cap.read()
 
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fps = 25
     num = 0
     while True:
-        ret, frame = cap.read()
-
-        if not ret:
+        # ret, frame = cap.read()
+        frame, status_code = cam_image_manager.get_image_from_wifi_cam(url)
+        if not status_code == 200:
             print("cant grab frame")
             continue
         results = model.track(frame, conf=0.5, iou=0.6, persist=True, verbose=False, tracker="botsort.yaml")
@@ -229,7 +234,7 @@ def send_fire_xy(model, cam_num, show_video=True):
         elif not is_shooting and not wait_for_fire.wait(results[0].boxes.id != None):
             search()
             print("EFHFUHEEFEFFE------------------------------")
-        capture.capture_fire(results[0].boxes.id != None, (int(cap.get(3)), int(cap.get(4))), fps, frame)
+        capture.capture_fire(results[0].boxes.id != None, (int(frame.shape[1]), int(frame.shape[0])), fps, frame)
         frame = cv2.rectangle(frame, (sight_coordinates[0], sight_coordinates[1]),
                               (sight_coordinates[2], sight_coordinates[3]), (0, 255, 0), 5)
         frame = cv2.rectangle(frame, (sight_coordinates[0] - sight_dimention, sight_coordinates[1] - sight_dimention),
@@ -246,7 +251,7 @@ def send_fire_xy(model, cam_num, show_video=True):
         capture.out.release()
     except AttributeError:
         print('no video was recording')
-    cap.release()
+    # cap.release()
 
     # Close all OpenCV windows
     cv2.destroyAllWindows()
