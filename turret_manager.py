@@ -14,23 +14,25 @@ class TurretControl:
     fps = 25
     num = 0
     angleX = 90
-    angleY = 20
+    angleY = 90
     xDirection = -1
     yDirection = 15
     in_diapason_x = True
     in_diapason_y = True
     xRotate = 1
-    yRotate = -1
+    yRotate = 1
     is_shooting = False
     remote_control = False
     model = None
-    maxX, minX = 150, 0
-    maxY, minY = 40, 0
+    maxX, minX = 90, 0
+    maxY, minY = 120, 65
 
     @staticmethod
     def send_command(dx, dy, shoot):
         TurretControl.angleX += dx
         TurretControl.angleY += dy
+        TurretControl.angleX = max(TurretControl.minX, min(TurretControl.maxX, TurretControl.angleX))
+        TurretControl.angleY = max(TurretControl.minY, min(TurretControl.maxY, TurretControl.angleY))
         msg = f"!{TurretControl.angleX}@{TurretControl.angleY}#{shoot};"
         # SEND
         WiFiTaskManager.send_data(msg)
@@ -73,7 +75,7 @@ class TurretControl:
         x_start = TurretControl.angleX - math.trunc(spray_width / 2)
         x_end = TurretControl.angleX + math.trunc(spray_width / 2)
         y_start = TurretControl.angleY
-        y_end = TurretControl.angleY - math.trunc(spray_width) * 4
+        y_end = TurretControl.angleY + math.trunc(spray_width) * 4
         y_before = TurretControl.angleY
         step_y = 1 if y_end - y_start > 0 else -1
         step_x = 1 if x_end - x_start > 0 else -1
@@ -115,10 +117,6 @@ class TurretControl:
         if TurretControl.angleY <= TurretControl.minY:
             TurretControl.angleY = TurretControl.minY
             TurretControl.yDirection = abs(TurretControl.yDirection) * TurretControl.yRotate
-        print(TurretControl.angleX,
-              TurretControl.angleY,
-              TurretControl.xDirection,
-              TurretControl.yDirection)
         TurretControl.angleX += TurretControl.xDirection * TurretControl.xRotate
         msg = f"!{TurretControl.angleX}@{TurretControl.angleY}#0;"
         # SEND

@@ -114,13 +114,16 @@ class GUI:
                 dy = -1
                 print("Move turret backward")
             if event.keysym == 'a':
-                dx = -1
+                dx = 1
                 print("Move turret left")
             elif event.keysym == 'd':
-                dx = 1
+                dx = -1
                 print("Move turret right")
             if event.keysym == 'space':
                 shoot = 1
+                print("Fire!")
+            elif event.keysym != 'space':
+                shoot = 0
                 print("Fire!")
             TurretControl.send_command(dx, dy, shoot)
         else:

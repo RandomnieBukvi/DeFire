@@ -59,6 +59,14 @@ class WiFiTaskManager:
             return
         return img_responce
 
+    @staticmethod
+    def toggle_control():
+        try:
+            img_responce = requests.get('http://' + WiFiTaskManager.device_ip + "/toggle_control")
+        except ConnectionError:
+            print('Connection lost')
+            return
+
 # def get_turret_ip():
 #     global broadcast_name
 #     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
