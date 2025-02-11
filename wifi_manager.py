@@ -17,18 +17,18 @@ class WiFiTaskManager:
             WiFiTaskManager.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             WiFiTaskManager.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             WiFiTaskManager.udp_socket.bind(("0.0.0.0", WiFiTaskManager.broadcast_port))
-            print("UDP-сокет инициализирован")
+            print("Turret: UDP-сокет инициализирован")
         else:
-            print("UDP-сокет УЖЕ инициализирован")
+            print("Turret: UDP-сокет УЖЕ инициализирован")
 
     @staticmethod
     def receive_broadcast():
         WiFiTaskManager.initialize_socket()  # Инициализируем сокет, если еще не инициализирован
 
-        print("Ожидание broadcast-сообщений...")
+        print("Turret: Ожидание broadcast-сообщений...")
         while True:
             message, addr = WiFiTaskManager.udp_socket.recvfrom(WiFiTaskManager.buffer_size)  # Ждем данные (до 1024 байт)
-            print(f"Получено сообщение: {message.decode()} от {addr}")
+            print(f"Turret: Получено сообщение: {message.decode()} от {addr}")
             if message.decode() == WiFiTaskManager.broadcast_name:
                 WiFiTaskManager.device_ip = addr[0]
                 break
@@ -36,7 +36,7 @@ class WiFiTaskManager:
     @staticmethod
     def send_data(message):
         if WiFiTaskManager.device_ip is None:
-            print("IP-адрес устройства не определен. Сначала выполните получение broadcast-сообщения.")
+            print("Turret: IP-адрес устройства не определен. Сначала выполните получение broadcast-сообщения.")
             return
 
         # Отправляем данные на сохраненный IP-адрес
@@ -48,14 +48,14 @@ class WiFiTaskManager:
         if WiFiTaskManager.udp_socket is not None:
             WiFiTaskManager.udp_socket.close()
             WiFiTaskManager.udp_socket = None
-            print("UDP-сокет закрыт")
+            print("Turret: UDP-сокет закрыт")
 
     @staticmethod
     def get_img_from_cam():
         try:
             img_responce = requests.get('http://' + WiFiTaskManager.device_ip + "/cam.jpg")
         except ConnectionError:
-            print('Connection lost')
+            print('Turret: Connection lost')
             return
         return img_responce
 
@@ -64,7 +64,7 @@ class WiFiTaskManager:
         try:
             img_responce = requests.get('http://' + WiFiTaskManager.device_ip + "/toggle_control")
         except ConnectionError:
-            print('Connection lost')
+            print('Turret: Toggle control - Connection lost')
             return
 
 # def get_turret_ip():

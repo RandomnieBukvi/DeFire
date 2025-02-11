@@ -1,10 +1,15 @@
 import sys
+import time
 
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from turret_manager import *
 import cv2
+
+from car_manager import *
+
+from main import enable_car
 
 
 class MainWindow(QWidget):
@@ -28,17 +33,20 @@ class MainWindow(QWidget):
         self.toggle_button.setFocusPolicy(Qt.NoFocus)
         self.VBL.addWidget(self.toggle_button)
 
+        self.first_image = True
         self.imageManager = ImageManager()
 
         self.imageManager.start()
         self.imageManager.ImageUpdate.connect(self.image_update_slot)
 
-        self.keyManager = KeyManager(self)
-        self.keyManager.start()
+        self.pressed_keys = set()
+
+        self.keyManager = KeyManager(self.pressed_keys)
+        # self.keyManager.start()
 
         self.setLayout(self.VBL)
+        print('init_end')
 
-        self.pressed_keys = set()
 
     def image_update_slot(self, image):
         # Get the current size of the label to dynamically resize the image
@@ -50,6 +58,11 @@ class MainWindow(QWidget):
 
         # Set the pixmap with the resized image
         self.feed_label.setPixmap(QPixmap.fromImage(scaled_image))
+
+        if self.first_image:
+            self.keyManager.start()
+            self.first_image = False
+        print('imgae update slot')
         # self.FeedLabel.setPixmap(QPixmap.fromImage(Image))
 
     # def cancel_feed(self):
@@ -60,8 +73,13 @@ class MainWindow(QWidget):
         self.imageManager.stop()  # Stop the worker thread
         self.keyManager.stop()
         TurretControl.release_video_capture()
-        if TurretControl.remote_control:
-            WiFiTaskManager.toggle_control()
+        # WiFiTaskManager.toggle_control() #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!!!!!!!!!!!!
+        # if TurretControl.remote_control:
+        #     WiFiTaskManager.toggle_control()
+        WiFiTaskManager.close_socket()
+        WifiCarManager.close_socket()
+
+        print('closing')
         event.accept()  # Accept the close event
 
     def keyPressEvent(self, event):
@@ -69,6 +87,8 @@ class MainWindow(QWidget):
             return  # Ignore auto-repeat key events
 
         self.pressed_keys.add(event.key())
+
+        print('key press')
         # self.handleKeyPress()
 
     # Key release event handler
@@ -77,6 +97,8 @@ class MainWindow(QWidget):
             return  # Ignore auto-repeat key events
 
         self.pressed_keys.discard(event.key())
+
+        print('key release')
         # self.handleKeyPress()
 
     def toggle_control(self):
@@ -110,6 +132,8 @@ class ImageManager(QThread):
                                    (sight_coordinates[0] - sight_dimention, sight_coordinates[1] - sight_dimention),
                                    (sight_coordinates[2] + sight_dimention, sight_coordinates[3] + sight_dimention),
                                    (0, 255, 255), 5)
+                im = cv2.flip(im, 0)
+                im = cv2.flip(im, 1)
             else:
                 im = TurretControl.recognize_fire(img_resp)
 
@@ -127,31 +151,33 @@ class ImageManager(QThread):
 
 
 class KeyManager(QThread):
-    handleKeys = pyqtSignal(QImage)
+    # handleKeys = pyqtSignal(QImage)
 
-    def __init__(self, main_window):
+    def __init__(self, pressed_keys):
         super().__init__()
-        self.main_window = main_window
+        self.ThreadActive = True
+        # self.main_window = main_window
+        self.pressed_keys = pressed_keys
+        self.arrows_pressed = False
 
     def run(self):
-        self.ThreadActive = True
         while self.ThreadActive:
             if TurretControl.remote_control:
                 key_list = []
                 dx, dy, shoot = 0, 0, 0
-                if Qt.Key_W in self.main_window.pressed_keys:
+                if Qt.Key_W in self.pressed_keys:
                     key_list.append('W')
                     dy += 1
-                if Qt.Key_S in self.main_window.pressed_keys:
+                if Qt.Key_S in self.pressed_keys:
                     key_list.append('S')
                     dy -= 1
-                if Qt.Key_A in self.main_window.pressed_keys:
+                if Qt.Key_A in self.pressed_keys:
                     key_list.append('A')
                     dx += 1
-                if Qt.Key_D in self.main_window.pressed_keys:
+                if Qt.Key_D in self.pressed_keys:
                     key_list.append('D')
                     dx -= 1
-                if Qt.Key_Space in self.main_window.pressed_keys:
+                if Qt.Key_Space in self.pressed_keys:
                     key_list.append('SPACE')
                     shoot = 1
                 # if Qt.Key_Tab in self.main_window.pressed_keys:
@@ -159,8 +185,35 @@ class KeyManager(QThread):
                 #     self.main_window.toggle_control()
                 # print(key_list)
                 TurretControl.send_command(dx, dy, shoot)
+            """
+            forward
+            backward
+            left
+            right
+            stop
+            """
+            if enable_car:
+                if Qt.Key_Up in self.pressed_keys:
+                    self.arrows_pressed = True
+                    WifiCarManager.send_data('forward')
+                    print('forward')
+                elif Qt.Key_Down in self.pressed_keys:
+                    self.arrows_pressed = True
+                    WifiCarManager.send_data('backward')
+                    print('backward')
+                elif Qt.Key_Left in self.pressed_keys:
+                    self.arrows_pressed = True
+                    WifiCarManager.send_data('left')
+                    print('left')
+                elif Qt.Key_Right in self.pressed_keys:
+                    self.arrows_pressed = True
+                    WifiCarManager.send_data('right')
+                    print('right')
+                elif self.arrows_pressed:
+                    self.arrows_pressed = False
+                    WifiCarManager.send_data('stop')
+                    print('stop')
             time.sleep(0.1)
-
 
     def stop(self):
         self.ThreadActive = False

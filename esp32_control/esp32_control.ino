@@ -6,11 +6,9 @@
 
 Servo servoX;
 Servo servoY;
-const int servoXPin = 15;//ALmaz pomogi
+const int servoXPin = 15;
 const int servoYPin = 13;
 const int pumpPin = 12;
-//const int pumpPin2 = 14;
-//const int pumpPinENB = 32;
 int angleX = 90;
 int angleY = 90;
 int shoot = 0;

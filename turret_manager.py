@@ -19,12 +19,12 @@ class TurretControl:
     yDirection = 15
     in_diapason_x = True
     in_diapason_y = True
-    xRotate = 1
+    xRotate = -1
     yRotate = 1
     is_shooting = False
     remote_control = False
     model = None
-    maxX, minX = 90, 0
+    maxX, minX = 150, 0
     maxY, minY = 120, 65
 
     @staticmethod
@@ -129,6 +129,8 @@ class TurretControl:
         imgnp = np.array(bytearray(img_resp.content), dtype=np.uint8)
         # Decode the image to a format suitable for OpenCV
         frame = cv2.imdecode(imgnp, -1)
+        frame = cv2.flip(frame, 0)
+        frame = cv2.flip(frame, 1)
         if img_resp.status_code != 200:
             print("cant grab frame")
             return None
